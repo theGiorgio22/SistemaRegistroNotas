@@ -22,7 +22,7 @@ class dConexion {
     function __construct($servidor, $basededatos, $puerto, $usuario, $clave) {
         $this->servidor = "localhost";
         $this->basededatos = "bdregistronotas";
-        $this->puerto = 8080;
+        $this->puerto = 3308;
         $this->usuario = "root";
         $this->clave = "";
     }
