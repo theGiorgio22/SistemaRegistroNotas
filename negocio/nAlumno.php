@@ -1,28 +1,21 @@
 <?php
+include_once "../datos/dAlumno.php";
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- * Description of nAlumno
- *
- * @author Usuario
- */
 class nAlumno {
-    //put your code here
-    public $m;
+    private $m;
+
     function __construct($cod, $nom, $ape, $dir, $tel) {
-        $this->m=new dAlumno($cod,$nom,$ape,$dir,$tel);
+        $this->m = new dAlumno($cod, $nom, $ape, $dir, $tel);
     }
-    function adicionar(){
-        $res=$this->m->Adicionar();
-        if($res) {
-            echo 'Se registró correctamente el alumno';
+
+    function insertar() {
+        $res = $this->m->Adicionar();
+        if ($res) {
+            echo '<div class="alert alert-success">Se registró correctamente el alumno</div>';
         } else {
-            echo 'No se registró correctamente el alumno';
+            echo '<div class="alert alert-danger">No se registró correctamente el alumno</div>';
         }
     }
+
+    // Aquí podrías agregar modificar(), eliminar(), buscar()
 }
