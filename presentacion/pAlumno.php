@@ -1,11 +1,12 @@
 <?php
+include_once "../datos/dConexion.php";
 include_once "../negocio/nAlumno.php";
 
 $alumno = null;
 $alumnoObj = null;
 
 // Conexión general para la tabla
-$conexion = new dconexion();
+$conexion = new dConexion();
 $con = $conexion->Conectar();
 $listado = mysqli_query($con, "SELECT * FROM alumno");
 
@@ -23,18 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($accion == 'insertar') {
         $alumnoObj->insertar();
-    } elseif ($accion == 'modificar') {
-        $alumnoObj->modificar();
-    } elseif ($accion == 'eliminar') {
-        $alumnoObj->eliminar();
-    } elseif ($accion == 'buscar') {
-        $alumno = $alumnoObj->buscar();
     }
 
     // Recargar listado después de acción
     $listado = mysqli_query($con, "SELECT * FROM alumno");
 }
 ?>
+
+
 
 <!DOCTYPE html>
 <html lang="es">
