@@ -1,132 +1,192 @@
 <?php
-include_once "../datos/dConexion.php";
 include_once "../negocio/nAlumno.php";
 
-$alumno = null;
-$alumnoObj = null;
+$mensaje = "";
+$alumno = ['codigo'=>'','nombre'=>'','apellido'=>'','direccion'=>'','telefono'=>''];
 
-// Conexión general para la tabla
-$conexion = new dConexion();
-$con = $conexion->Conectar();
-$listado = mysqli_query($con, "SELECT * FROM alumno");
+$nAlumnoObj = new nAlumno();
+$listado = null;
 
-// Operaciones del CRUD
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $cod = isset($_POST['codigo']) ? $_POST['codigo'] : 0;
-    $nom = $_POST['nombre'];
-    $ape = $_POST['apellido'];
-    $dir = $_POST['direccion'];
-    $tel = $_POST['telefono'];
+try {
+    $listado = $nAlumnoObj->listar();
+} catch (Exception $e) {
+    $mensaje = "Error al cargar los alumnos: " . $e->getMessage();
+}
 
-    $alumnoObj = new nAlumno($cod, $nom, $ape, $dir, $tel);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $cod  = $_POST['codigo'] ?? 0;
+    $nom  = $_POST['nombre'] ?? '';
+    $ape  = $_POST['apellido'] ?? '';
+    $dir  = $_POST['direccion'] ?? '';
+    $tel  = $_POST['telefono'] ?? '';
 
-    $accion = $_POST['accion'];
+    $nAlumno = new nAlumno($cod, $nom, $ape, $dir, $tel);
 
-    if ($accion == 'insertar') {
-        $alumnoObj->insertar();
+    if (isset($_POST['insertar'])) {
+        $resultado = $nAlumno->insertar();
+        if ($resultado === "ok") {
+            $mensaje = "✅ Alumno registrado correctamente";
+        } elseif ($resultado === "error_duplicado") {
+            $mensaje = "⚠️ Ya existe un alumno con el código " . htmlspecialchars($cod);
+        } elseif ($resultado === "error_campos") {
+            $mensaje = "⚠️ Debes rellenar todos los campos para registrar";
+        } else {
+            $mensaje = "❌ Error al registrar: $resultado";
+        }
+    } elseif (isset($_POST['modificar'])) {
+        $resultado = $nAlumno->modificar();
+        if ($resultado === "ok") {
+            $mensaje = "✏️ Alumno modificado correctamente";
+        } elseif ($resultado === "error_campos") {
+            $mensaje = "⚠️ Debes rellenar todos los campos para modificar";
+        } else {
+            $mensaje = "❌ No se encontró el alumno a modificar";
+        }
+    } elseif (isset($_POST['eliminar'])) {
+        $resultado = $nAlumno->eliminar();
+        if ($resultado === "ok") {
+            $mensaje = "🗑️ Alumno eliminado correctamente";
+        } elseif ($resultado === "error_campos") {
+            $mensaje = "⚠️ Debes rellenar todos los campos para eliminar";
+        } elseif ($resultado === "error_no_coincide") {
+            $mensaje = "❌ Los datos ingresados no coinciden con los registrados en la BD";
+        } else {
+            $mensaje = "❌ No se encontró el alumno o error al eliminar";
+        }
+    } elseif (isset($_POST['buscar'])) {
+        $resultado = $nAlumno->buscar();
+        if ($resultado && is_array($resultado)) {
+            $alumno = $resultado;
+            $mensaje = "🔎 Alumno encontrado";
+        } else {
+            $mensaje = "⚠️ Alumno no encontrado";
+        }
     }
 
-    // Recargar listado después de acción
-    $listado = mysqli_query($con, "SELECT * FROM alumno");
+    try {
+        $listado = $nAlumnoObj->listar();
+    } catch (Exception $e) {
+        $mensaje = "Error al actualizar lista: " . $e->getMessage();
+    }
 }
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Gestión de Repuestos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f0fdf4;
-        }
-        .bg-green {
-            background-color: #198754 !important; /* Bootstrap green */
-        }
-        .btn-green {
-            background-color: #198754;
-            color: white;
-        }
-        .btn-green:hover {
-            background-color: #157347;
-            color: white;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Gestión de Alumnos</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    body { background: linear-gradient(to right, #e3f2fd, #f1f8e9); }
+    .form-container { max-width: 900px; margin: auto; border-radius: 15px; }
+    .btn { min-width: 100px; }
+    table { border-radius: 10px; overflow: hidden; }
+    .icon-btn { border: none; background: none; cursor: pointer; }
+</style>
 </head>
 <body>
-
 <div class="container mt-5">
-    <h2 class="text-center text-success mb-4">FORMULARIO DE ALUMNOS</h2>
 
-    <form method="post" class="p-4 border rounded shadow" style="background-color: #d1e7dd;">
+    <h2 class="text-center text-success mb-4 fw-bold">📚 Registro de Alumnos</h2>
 
+    <?php if($mensaje): ?>
+    <div class="alert alert-info text-center fw-semibold shadow-sm"><?php echo $mensaje; ?></div>
+    <?php endif; ?>
+
+    <!-- Formulario de insertar/buscar -->
+    <form method="post" class="p-4 bg-white shadow form-container">
         <div class="row">
             <div class="col-md-4 mb-3">
-                <label>ID (para buscar, modificar o eliminar)</label>
-                <input type="number" name="codigo" class="form-control" value="<?php echo isset($alumno['codigo']) ? $alumno['codigo'] : ''; ?>">
+                <label for="codigo" class="form-label fw-bold">Código</label>
+                <input type="number" name="codigo" id="codigo" class="form-control" 
+                       value="<?php echo htmlspecialchars($alumno['codigo']); ?>">
             </div>
-
             <div class="col-md-4 mb-3">
-                <label>Nombre</label>
-                <input type="text" name="nombre" class="form-control" value="<?php echo isset($alumno['nombre']) ? $alumno['nombre'] : ''; ?>">
+                <label for="nombre" class="form-label fw-bold">Nombre</label>
+                <input type="text" name="nombre" id="nombre" class="form-control" 
+                       value="<?php echo htmlspecialchars($alumno['nombre']); ?>" required>
             </div>
-
             <div class="col-md-4 mb-3">
-                <label>Apellido</label>
-                <input type="text" name="apellido" class="form-control" value="<?php echo isset($alumno['apellido']) ? $alumno['apellido'] : ''; ?>">
+                <label for="apellido" class="form-label fw-bold">Apellido</label>
+                <input type="text" name="apellido" id="apellido" class="form-control" 
+                       value="<?php echo htmlspecialchars($alumno['apellido']); ?>" required>
             </div>
-
-            <div class="col-md-4 mb-3">
-                <label>Direccion</label>
-                <input type="text" name="direccion" class="form-control" value="<?php echo isset($alumno['direccion']) ? $alumno['direccion'] : ''; ?>">
+            <div class="col-md-6 mb-3">
+                <label for="direccion" class="form-label fw-bold">Dirección</label>
+                <input type="text" name="direccion" id="direccion" class="form-control" 
+                       value="<?php echo htmlspecialchars($alumno['direccion']); ?>">
             </div>
-
-            <div class="col-md-4 mb-3">
-                <label>telefono</label>
-                <input type="text" step="0.01" name="telefono" class="form-control" value="<?php echo isset($alumno['telefono']) ? $alumno['telefono'] : ''; ?>">
+            <div class="col-md-6 mb-3">
+                <label for="telefono" class="form-label fw-bold">Teléfono</label>
+                <input type="text" name="telefono" id="telefono" class="form-control" 
+                       value="<?php echo htmlspecialchars($alumno['telefono']); ?>">
             </div>
         </div>
-
-        <div class="d-flex justify-content-between">
-            <button type="submit" name="accion" value="insertar" class="btn btn-green">Insertar</button>
-            <button type="submit" name="accion" value="modificar" class="btn btn-warning">Modificar</button>
-            <button type="submit" name="accion" value="eliminar" class="btn btn-danger">Eliminar</button>
-            <button type="submit" name="accion" value="buscar" class="btn btn-info text-white">Buscar</button>
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+            <button type="submit" name="insertar" class="btn btn-success">✅ Insertar</button>
+            <button type="submit" name="buscar" class="btn btn-info text-white">🔎 Buscar</button>
         </div>
-
     </form>
 
-    <hr class="my-4">
+    <hr class="my-5">
 
-    <h4 class="text-success">Lista de Alumnos</h4>
-
-    <table class="table table-striped table-hover table-bordered shadow">
-        <thead class="bg-green text-white">
-            <tr>
-                <th>Codigo Estudiante</th>
-                <th>Nombre</th>
-                <th>Apellido</th>
-                <th>Direccion</th>
-                <th>telefono</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php while ($fila = mysqli_fetch_assoc($listado)) { ?>
-            <tr>
-                <td><?php echo $fila['codigo']; ?></td>
-                <td><?php echo $fila['nombre']; ?></td>
-                <td><?php echo $fila['apellido']; ?></td>
-                <td><?php echo $fila['direccion']; ?></td>
-                <td><?php echo $fila['telefono']; ?></td>
-            </tr>
-            <?php } ?>
-        </tbody>
-    </table>
-
+    <h4 class="text-success fw-bold">📋 Lista de Alumnos</h4>
+    <div class="table-responsive shadow-sm">
+        <table class="table table-bordered table-hover bg-white">
+            <thead class="table-success text-center">
+                <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Dirección</th>
+                    <th>Teléfono</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if($listado && mysqli_num_rows($listado) > 0): ?>
+                <?php while($fila = mysqli_fetch_assoc($listado)): ?>
+                    <tr>
+                        <td><?php echo $fila['codigo']; ?></td>
+                        <td><?php echo $fila['nombre']; ?></td>
+                        <td><?php echo $fila['apellido']; ?></td>
+                        <td><?php echo $fila['direccion']; ?></td>
+                        <td><?php echo $fila['telefono']; ?></td>
+                        <td class="text-center">
+                            <!-- Formulario para modificar -->
+                            <form method="post" style="display:inline;">
+                                <input type="hidden" name="codigo" value="<?php echo $fila['codigo']; ?>">
+                                <input type="hidden" name="nombre" value="<?php echo htmlspecialchars($fila['nombre']); ?>">
+                                <input type="hidden" name="apellido" value="<?php echo htmlspecialchars($fila['apellido']); ?>">
+                                <input type="hidden" name="direccion" value="<?php echo htmlspecialchars($fila['direccion']); ?>">
+                                <input type="hidden" name="telefono" value="<?php echo htmlspecialchars($fila['telefono']); ?>">
+                                <button type="submit" name="modificar" class="icon-btn text-warning" title="Modificar">
+                                    ✏️
+                                </button>
+                            </form>
+                            <!-- Formulario para eliminar -->
+                            <form method="post" style="display:inline;" onsubmit="return confirm('¿Seguro que deseas eliminar este alumno?');">
+                                <input type="hidden" name="codigo" value="<?php echo $fila['codigo']; ?>">
+                                <input type="hidden" name="nombre" value="<?php echo htmlspecialchars($fila['nombre']); ?>">
+                                <input type="hidden" name="apellido" value="<?php echo htmlspecialchars($fila['apellido']); ?>">
+                                <input type="hidden" name="direccion" value="<?php echo htmlspecialchars($fila['direccion']); ?>">
+                                <input type="hidden" name="telefono" value="<?php echo htmlspecialchars($fila['telefono']); ?>">
+                                <button type="submit" name="eliminar" class="icon-btn text-danger" title="Eliminar">
+                                    🗑️
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="6" class="text-center text-muted">🙁 No hay alumnos registrados</td>
+                </tr>
+            <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
 </div>
-
 </body>
 </html>
