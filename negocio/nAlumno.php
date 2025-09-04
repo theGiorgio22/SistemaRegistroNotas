@@ -4,18 +4,20 @@ include_once "../datos/dAlumno.php";
 class nAlumno {
     private $m;
 
-    function __construct($cod, $nom, $ape, $dir, $tel) {
+    function __construct($cod=0, $nom='', $ape='', $dir='', $tel='') {
         $this->m = new dAlumno($cod, $nom, $ape, $dir, $tel);
     }
 
-    function insertar() {
-        $res = $this->m->Adicionar();
-        if ($res) {
-            echo '<div class="alert alert-success">Se registró correctamente el alumno</div>';
-        } else {
-            echo '<div class="alert alert-danger">No se registró correctamente el alumno</div>';
-        }
-    }
+    function insertar() { return $this->m->Adicionar(); }
+    function modificar() { return $this->m->Modificar(); }
+    function eliminar()  { return $this->m->Eliminar(); }
+    function buscar()   { return $this->m->Buscar(); }
 
-    // Aquí podrías agregar modificar(), eliminar(), buscar()
+    function listar() {
+        $con = (new dConexion())->Conectar();
+        $res = mysqli_query($con, "SELECT * FROM alumno");
+        mysqli_close($con);
+        return $res;
+    }
 }
+?>
